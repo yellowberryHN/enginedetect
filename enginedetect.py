@@ -2,9 +2,9 @@
 # By Yellowberry
 # https://github.com/YellowberryHN/enginedetect
 
-import os, sys, mmap, struct, array, json, zipfile, argparse, platform
+import os, sys, mmap, struct, array, json, zipfile, argparse, platform, gc
 
-args = {"engine": "", "dir": "", "game": ""}
+args = {"engine": "", "dir": "", "game": "", "verbose": 0}
 if __name__=="__main__":
 
 	if platform.system() != "Windows":
@@ -15,11 +15,13 @@ if __name__=="__main__":
 	parser.add_argument("-e", metavar="ENGINE", help="filter specific game engines")
 	parser.add_argument("-d", metavar="DIR", help="specifies directory to scan, defaults to working directory")
 	parser.add_argument("-g", metavar="GAME", help="scan directory GAME inside of DIR as a game")
+	parser.add_argument("-v", help="display verbose info", action="count")
 	arg = parser.parse_args()
 	args = {
 		"engine": arg.e if arg.e else "",
 		"dir": arg.d if arg.d else "",
-		"game": arg.g if arg.g else ""
+		"game": arg.g if arg.g else "",
+		"verbose": arg.v if arg.v else 0
 	}
 
 engineDict = {} # Used for counting games
@@ -67,7 +69,9 @@ def pj(*args):
 	return "/".join(list(args))
 
 # Game detection
-def detectGame(dirName):
+def detectGame(dirName, fastParse=False):
+	# fastParse: Parse extremely quickly, just based on files and folders (highly discouraged)
+
 	global gameDir
 	gameName = dirName
 	dirName = pj(args["dir"],dirName) if args["dir"] else dirName
@@ -75,7 +79,7 @@ def detectGame(dirName):
 	engineType = "Unknown"
 	engineSet = False # Used for engines which might trigger multiple detections
 	subGames = [] # Used for GoldSrc
-
+	
 	if any(in_list_starts(".")):
 		for x in in_list_starts("."):
 			gameDir.remove(x)
@@ -115,6 +119,7 @@ def detectGame(dirName):
 				if ver_num[0] == ver_num[1]:
 					if   ver_num[0] == 25: engineType += " 4"
 					elif ver_num[0] == 31: engineType += " 5"
+			file.close()
 
 	elif any(in_list_starts("data.")):
 		dataFiles = [in_list_starts("data.")]
@@ -122,10 +127,12 @@ def detectGame(dirName):
 			with open(pj(dirName,g[0]),"rb") as fi:
 				if fi.read(4) == b'FORM':
 					engineType = "GameMaker Studio"
+				fi.close()
 
 	elif any(in_list("Common.dll")):
 		with open(pj(dirName,"Common.dll"), "r+b") as f:
 			mmw = mmap.mmap(f.fileno(), 0)
+			f.close()
 		if mmw.find(bstr_vrs) > 0:
 			engineType = "Visual RPG Studio"
 
@@ -137,7 +144,7 @@ def detectGame(dirName):
 		engineType = "Godot"
 
 	elif any(in_list_ends(".grp")):
-		engineType = "Build"
+		engineType = "Build Engine"
 	
 	elif any(in_list("nw.pak")):
 		if any(in_list("package.nw")) and zipfile.is_zipfile(pj(dirName,"package.nw")):
@@ -175,6 +182,9 @@ def detectGame(dirName):
 	elif any(in_list("3DRad_res")):
 		engineType = "3D Rad"
 
+	elif any(in_list("Program")) and any(in_list("Songs")):
+		engineType = "StepMania"
+
 	elif any(in_list("Adobe AIR")):
 		if any(in_list_ends(".swf")):
 			engineType = "Adobe AIR"
@@ -186,7 +196,7 @@ def detectGame(dirName):
 
 	elif any(in_list("Engine")) and os.path.isdir(pj(dirName,"Engine")):
 		if any(in_list("Config", os.listdir(pj(dirName,"Engine")))):
-			engineType = "Unreal"
+			engineType = "Unreal Engine"
 
 	elif any(in_list_starts("Data")):
 		eee = in_list_starts("Data")[0]
@@ -200,90 +210,151 @@ def detectGame(dirName):
 	exeList = in_list_ends(".exe")
 	dirList = [i for i in gameDir if os.path.isdir(pj(dirName,i))]
 
+	detectExe = ""
+
 	for g in dirList:
 		if any(in_list_ends(".vpk",os.listdir(pj(dirName,g)))):
-			engineType = "Source"
+			engineType = "Source Engine"
 
-	if len(exeList) < 1:
-		return # Ignore folders with no exe, probably not a game, could cause issues
-	for exe in exeList:
-		exeName = exe[:-4]
-		if exeName == "dosbox":
-			engineType = "DOSbox"
+	if not (fastParse and engineType=="Unknown") and engineType=="Unknown": # If fast mode, only run deep scan when we haven't found another engine
+		for exe in exeList:
+			exeName = exe[:-4]
+			if exeName == "dosbox":
+				engineType = "DOSbox"
+				detectExe = exe
+				continue
 
-		elif any(in_list(exeName+".rgss2a")) or any(in_list(exeName+".rvproj")):
-			engineType = "RPG Maker VX"
+			elif exeName.startswith("UnityCrashHandler") or "unins" in exeName.lower():
+				continue
 
-		elif any(in_list(exeName+".rgss3a")) or any(in_list(exeName+".rvproj2")):
-			engineType = "RPG Maker VX Ace"
+			elif any(in_list(exeName+".rgss2a")) or any(in_list(exeName+".rvproj")):
+				engineType = "RPG Maker VX"
+				detectExe = exe
+				continue
 
-		elif exeName.startswith("th") and any(i for i in gameDir if (i.lower().endswith(".dat") and i.lower().startswith(exeName))):
-			engineType = "Touhou"
+			elif any(in_list(exeName+".rgss3a")) or any(in_list(exeName+".rvproj2")):
+				engineType = "RPG Maker VX Ace"
+				detectExe = exe
+				continue
 
-		elif any(in_list(exeName+"_Data")):
-			engineType = "Unity"
+			elif exeName.startswith("th") and any(i for i in gameDir if (i.lower().endswith(".dat") and i.lower().startswith(exeName))):
+				engineType = "Touhou"
+				detectExe = exe
+				continue
 
-		elif exeName == "hl": # hardcoding is bad
-			engineType = "GoldSrc"
-			
-			for g in dirList:
-				if any(in_list("dlls", os.listdir(pj(dirName,g)))):
-					subGames.append(g)
-					if not args["game"]: incDict(engineType)
+			elif any(in_list(exeName+"_Data")):
+				engineType = "Unity"
+				detectExe = exe
+				continue
 
-		# slow shit beyond this point
-		else:
-			with open(pj(dirName,exe), "r+b") as f:
-				mm = mmap.mmap(f.fileno(), 0)
-			if mm.find(bstr_xna) > 0:
-				engineType = "XNA"
-			elif mm.find(bstr_clickteam) > 0:
-				engineType = "Clickteam Fusion 2.5"
-			elif mm.find(bstr_mmf) > 0:
-				engineType = "Multimedia Fusion 2"
-			elif mm.find(bstr_fpsc) > 0:
-				engineType = "FPS Creator"
-			elif mm.find(bstr_gameguru) > 0:
-				engineType = "GameGuru"
-			elif mm.find(bstr_godot) > 0:
-				engineType = "Godot"
-			elif mm.find(bstr_zero) > 0:
-				engineType = "ZeroEngine"
-			elif mm.find(bstr_rpgpaper) > 0:
-				engineType = "RPG Paper Maker"
-			elif (mm.find(b'gamemaker') > 0) and (engineType != "GameMaker Studio"):
-				engineType = "GameMaker Legacy"
-			elif mm.find(b'pygame') > 0:
-				engineType = "PyGame"
-			elif mm.find(b'\x00python') > 0 and not engineSet:
-				engineType = "PyGame"
-			elif zipfile.is_zipfile(pj(dirName,exe)):
-				with zipfile.ZipFile(pj(dirName,exe), 'r') as exeZip:
-					if any(in_list("main.lua",exeZip.namelist())):
-						engineType = "LOVE"
+			elif exeName == "hl": # hardcoding is bad
+				engineType = "GoldSrc"
+				detectExe = exe
+				
+				for g in dirList:
+					if any(in_list("dlls", os.listdir(pj(dirName,g)))):
+						subGames.append(g)
+						if not args["game"]: incDict(engineType)
+				continue
 
-			if engineType == "Unknown":
-				mm.seek(mm.find(b'PE\x00\x00')+4)
-				fileArch = struct.unpack("<H", mm.read(2))[0]
-				if fileArch == 332:
-					exeArch = "32-bit"
-					mm.seek(226, 1)
-					exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
-				elif fileArch == 34404:
-					exeArch = "64-bit"
-					mm.seek(242, 1)
-					exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
-				engineType = ("Unknown [%s, %s]" % (exeType, exeArch))
+			# slow shit beyond this point
+			else:
+				with open(pj(dirName,exe), "r+b") as f:
+					mm = mmap.mmap(f.fileno(), 0)
+					f.close() # not really needed, makes me feel better.
+				if mm.find(bstr_xna)>0:
+					engineType = "XNA"
+					detectExe = exe
+					continue
+				elif mm.find(bstr_clickteam)>0:
+					engineType = "Clickteam Fusion 2.5"
+					detectExe = exe
+					continue
+				elif mm.find(bstr_mmf)>0:
+					engineType = "Multimedia Fusion 2"
+					detectExe = exe
+					continue
+				elif mm.find(bstr_fpsc)>0:
+					engineType = "FPS Creator"
+					detectExe = exe
+					continue
+				elif mm.find(bstr_gameguru)>0:
+					engineType = "GameGuru"
+					detectExe = exe
+					continue
+				elif mm.find(bstr_godot)>0:
+					engineType = "Godot"
+					detectExe = exe
+					continue
+				elif mm.find(bstr_zero)>0:
+					engineType = "ZeroEngine"
+					detectExe = exe
+					continue
+				elif mm.find(bstr_rpgpaper)>0:
+					engineType = "RPG Paper Maker"
+					detectExe = exe
+					continue
+				elif mm.find(b':heGame')>0:
+					engineType = "Hacker Evolution"
+					detectExe = exe
+					continue
+				elif mm.find(b'hedGame:')>0:
+					engineType = "Hacker Evolution: Duality"
+					detectExe = exe
+					continue
+				elif mm.find(b'@Sexy@')>0:
+					engineType = "Sexy"
+					detectExe = exe
+					continue
+				elif mm.find(b'gamemaker')>0 and engineType != "GameMaker Studio":
+					engineType = "GameMaker Legacy"
+					detectExe = exe
+					continue
+				elif mm.find(b'pygame')>0:
+					engineType = "PyGame"
+					detectExe = exe
+					continue
+				elif mm.find(b'\x00python')>0 and not engineSet:
+					engineType = "PyGame"
+					detectExe = exe
+					continue
+				elif zipfile.is_zipfile(pj(dirName,exe)):
+					with zipfile.ZipFile(pj(dirName,exe), 'r') as exeZip:
+						if any(in_list("main.lua",exeZip.namelist())):
+							engineType = "LOVE"
+						exeZip.close() # again, not needed.
+
+				if engineType == "Unknown": # If we still come up with nothing matched, just output some info about the executable
+					mm.seek(mm.find(b'PE\x00\x00')+4)
+					fileArch = struct.unpack("<H", mm.read(2))[0]
+					if fileArch == 332:
+						exeArch = "32-bit"
+						mm.seek(226, 1)
+						exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
+					elif fileArch == 34404:
+						exeArch = "64-bit"
+						mm.seek(242, 1)
+						exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
+					engineType = ("Unknown [%s, %s]" % (exeType, exeArch))
+
+					detectExe = exe
+				del mm
+				gc.collect() # this might cause problems, but it might make it faster
+	if engineType == "Unknown" and not fastParse:
+		return # At this point, if we don't know what it is, it's probably not a game at all.
 
 	if not args["game"]: incDict(engineType)
-	return [gameName, engineType, subGames]
+	return [gameName, engineType, subGames, detectExe]
 		
 def detectClean(game, list):
 	info = detectGame(game)
 	if not info: return
 	if filterEngine == "" or filterEngine.lower() in info[1].lower():
-		pfmt = "- %s (%s)" if list else "%s (%s)"
-		print(pfmt % (info[0], info[1]))
+		if list:
+			pfmt = "- %s (%s) [%s]" if args["verbose"] > 0 else "- %s (%s)"
+		else:
+			pfmt = "%s (%s) [%s]" if args["verbose"] > 0 else "%s (%s)"
+		print(pfmt % (info[0], info[1], info[3] if info[3] else "N/A") if args["verbose"] > 0 else pfmt % (info[0], info[1]) )
 		if len(info[2]) > 0: print("  - Sub-games: %s" % str(info[2])[1:-1])
 
  

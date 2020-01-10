@@ -21,7 +21,7 @@ I'm looking for the following:
 
 - 3D Rad
 - Adobe AIR
-- Build
+- Build Engine
 - Clickteam Fusion 2.5
 - Construct 2
 - Construct 3
@@ -34,6 +34,8 @@ I'm looking for the following:
 - GameMaker Studio
 - Godot
 - GoldSrc (with Steam support)
+- Hacker Evolution [heEngine]
+- Hacker Evolution: Duality [hedEngine]
 - id Tech 2 [Quake]
 - id Tech 2 [Quake 2]
 - id Tech 3 [Quake 3]
@@ -50,10 +52,12 @@ I'm looking for the following:
 - RPG Maker VX Ace
 - RPG Maker XP
 - RPG Paper Maker
-- Source
+- Sexy (PopCap)
+- Source Engine
+- StepMania
 - Touhou
 - Unity
-- Unreal
+- Unreal Engine
 - Visual RPG Studio
 - XNA
 - ZeroEngine
@@ -65,6 +69,6 @@ I'm looking for the following:
 - Hazel
 - Frostbite
 - RAGE
-- IW
+- IW Engine
 - Decima
 
