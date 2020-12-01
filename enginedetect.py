@@ -8,8 +8,8 @@ args = {"engine": "", "dir": "", "game": "", "verbose": 0}
 if __name__=="__main__":
 
 	if platform.system() != "Windows":
-		print("WARNING: This script is currently only designed for a Windows environment and Windows games!")
-		input("Press ENTER to continue!")
+		print("WARNING: This script is currently only designed for a Windows environment and Windows games! You may run into issues.")
+		input("Press ENTER to run anyway!")
 
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-e", metavar="ENGINE", help="filter specific game engines")
@@ -27,26 +27,7 @@ if __name__=="__main__":
 engineDict = {} # Used for counting games
 gameDir = []
 
-filterEngine = args["engine"] if args["engine"] else "" # Engine to filter results
-
-# unicode string "Clickteam Fusion"
-bstr_clickteam = b'\x43\x00\x6C\x00\x69\x00\x63\x00\x6B\x00\x74\x00\x65\x00\x61\x00\x6D\x00\x20\x00\x46\x00\x75\x00\x73\x00\x69\x00\x6F\x00\x6E'
-# unicode string "Multimedia Fusion"
-bstr_mmf = b'\x4D\x00\x75\x00\x6C\x00\x74\x00\x69\x00\x6D\x00\x65\x00\x64\x00\x69\x00\x61\x00\x20\x00\x46\x00\x75\x00\x73\x00\x69\x00\x6F\x00\x6E'
-# unicode string "Game Guru"
-bstr_gameguru = b'\x47\x00\x61\x00\x6D\x00\x65\x00\x20\x00\x47\x00\x75\x00\x72\x00\x75'
-# uncode string "FPSC"
-bstr_fpsc = b'\x46\x00\x50\x00\x53\x00\x43'
-# unicode string "Godot"
-bstr_godot = b'\x47\x00\x6F\x00\x64\x00\x6F\x00\x74'
-# unicode string "ZeroEngine"
-bstr_zero = b'\x5A\x00\x65\x00\x72\x00\x6F\x00\x45\x00\x6E\x00\x67\x00\x69\x00\x6E\x00\x65'
-# unicode string "Visual RPG Studio"
-bstr_vrs = b'\x56\x00\x69\x00\x73\x00\x75\x00\x61\x00\x6C\x00\x20\x00\x52\x00\x50\x00\x47\x00\x20\x00\x53\x00\x74\x00\x75\x00\x64\x00\x69\x00\x6F'
-# string "RPG Paper Maker"
-bstr_rpgpaper = b'RPG Paper Maker'
-# string "Microsoft.Xna.Framework"
-bstr_xna = b'Microsoft.Xna.Framework'
+filterEngine = args["engine"] # Engine to filter results
 
 def incDict(name):
 	if not name in engineDict.keys():
@@ -65,8 +46,27 @@ def in_list_ends(string, sList=None):
 	if not sList: sList = gameDir
 	return [i for i in sList if i.lower().endswith(string.lower())]
 
-def pj(*args):
+def pj(*args): # path join
 	return "/".join(list(args))
+
+def dotClean(gameDir):
+	if any(in_list_starts(".")):
+		for x in in_list_starts("."):
+			gameDir.remove(x)
+	return gameDir
+
+def recurseDir(dirName, gameDir): # recurses through directories to find one that actually has stuff in it.
+	gameDir = dotClean(gameDir)
+	i = 0
+	while len(gameDir) < 2:
+		if i == 5 or len(gameDir) < 1:
+			return (dirName, gameDir)
+		if len(gameDir) == 1 and os.path.isdir(pj(dirName,gameDir[0])):
+			dirName = pj(dirName,gameDir[0])
+			gameDir = dotClean(os.listdir(dirName)) # If directory only has one folder, assume game data is in here.
+		i += 1
+
+	return (dirName, gameDir)
 
 # Game detection
 def detectGame(dirName, fastParse=False):
@@ -80,13 +80,7 @@ def detectGame(dirName, fastParse=False):
 	engineSet = False # Used for engines which might trigger multiple detections
 	subGames = [] # Used for GoldSrc
 	
-	if any(in_list_starts(".")):
-		for x in in_list_starts("."):
-			gameDir.remove(x)
-
-	if len(gameDir) == 1 and os.path.isdir(pj(dirName,gameDir[0])):
-		dirName = pj(dirName,gameDir[0])
-		gameDir = os.listdir(dirName) # If directory only has one folder, assume game data is in here.
+	dirName, gameDir = recurseDir(dirName, gameDir)
 
 	if any(in_list("application_info.json")):
 		dirName = pj(dirName,"content")
@@ -133,7 +127,7 @@ def detectGame(dirName, fastParse=False):
 		with open(pj(dirName,"Common.dll"), "r+b") as f:
 			mmw = mmap.mmap(f.fileno(), 0)
 			f.close()
-		if mmw.find(bstr_vrs) > 0:
+		if mmw.find('Visual RPG Studio'.encode('utf-16be')) > 0:
 			engineType = "Visual RPG Studio"
 
 	elif any(in_list("libpanda.dll")):
@@ -195,8 +189,8 @@ def detectGame(dirName, fastParse=False):
 				engineType = "Cube 2"
 
 	elif any(in_list("Engine")) and os.path.isdir(pj(dirName,"Engine")):
-		if any(in_list("Config", os.listdir(pj(dirName,"Engine")))):
-			engineType = "Unreal Engine"
+		if any(in_list("Binaries", os.listdir(pj(dirName,"Engine")))) or any(in_list("Config", os.listdir(pj(dirName,"Engine")))):
+			engineType = "Unreal Engine 4"
 
 	elif any(in_list_starts("Data")):
 		eee = in_list_starts("Data")[0]
@@ -262,35 +256,39 @@ def detectGame(dirName, fastParse=False):
 				with open(pj(dirName,exe), "r+b") as f:
 					mm = mmap.mmap(f.fileno(), 0)
 					f.close() # not really needed, makes me feel better.
-				if mm.find(bstr_xna)>0:
+				if mm.find(b'Microsoft.Xna.Framework')>0:
 					engineType = "XNA"
 					detectExe = exe
 					continue
-				elif mm.find(bstr_clickteam)>0:
+				elif mm.find('Pixel Game Maker MV'.encode('utf-16be'))>0:
+					engineType = "Pixel Game Maker MV"
+					detectExe = exe
+					continue
+				elif mm.find('Clickteam Fusion'.encode('utf-16be'))>0:
 					engineType = "Clickteam Fusion 2.5"
 					detectExe = exe
 					continue
-				elif mm.find(bstr_mmf)>0:
+				elif mm.find('Multimedia Fusion'.encode('utf-16be'))>0:
 					engineType = "Multimedia Fusion 2"
 					detectExe = exe
 					continue
-				elif mm.find(bstr_fpsc)>0:
+				elif mm.find('FPSC'.encode('utf-16be'))>0:
 					engineType = "FPS Creator"
 					detectExe = exe
 					continue
-				elif mm.find(bstr_gameguru)>0:
+				elif mm.find('Game Guru'.encode('utf-16be'))>0:
 					engineType = "GameGuru"
 					detectExe = exe
 					continue
-				elif mm.find(bstr_godot)>0:
+				elif mm.find('Godot'.encode('utf-16be'))>0:
 					engineType = "Godot"
 					detectExe = exe
 					continue
-				elif mm.find(bstr_zero)>0:
+				elif mm.find('ZeroEngine'.encode('utf-16be'))>0:
 					engineType = "ZeroEngine"
 					detectExe = exe
 					continue
-				elif mm.find(bstr_rpgpaper)>0:
+				elif mm.find(b'RPG Paper Maker')>0:
 					engineType = "RPG Paper Maker"
 					detectExe = exe
 					continue
@@ -316,6 +314,10 @@ def detectGame(dirName, fastParse=False):
 					continue
 				elif mm.find(b'\x00python')>0 and not engineSet:
 					engineType = "PyGame"
+					detectExe = exe
+					continue
+				elif mm.find('electron.app'.encode('utf-16be'))>0:
+					engineType = "Electron [Web App]" # TODO: Detect CEF icudtl.dat
 					detectExe = exe
 					continue
 				elif zipfile.is_zipfile(pj(dirName,exe)):
@@ -357,19 +359,19 @@ def detectClean(game, list):
 		print(pfmt % (info[0], info[1], info[3] if info[3] else "N/A") if args["verbose"] > 0 else pfmt % (info[0], info[1]) )
 		if len(info[2]) > 0: print("  - Sub-games: %s" % str(info[2])[1:-1])
 
- 
-# Gather all game directories
-if not args["game"]:
-	gamedirs = next(os.walk(args["dir"] if args["dir"] else '.'))[1]
+if __name__=="__main__":
+	# Gather all game directories
+	if not args["game"]:
+		gamedirs = next(os.walk(args["dir"] if args["dir"] else '.'))[1]
 
-	print("== Games ==")
-	for game in gamedirs:
-		detectClean(game, True)
-else:
-	detectClean(args["game"], False)
+		print("== Games ==")
+		for game in gamedirs:
+			detectClean(game, True)
+	else:
+		detectClean(args["game"], False)
 
-if not args["game"]: 
-	eCount = {k: v for k, v in sorted(engineDict.items(), reverse=True, key=lambda item: item[1])}
-	print("\n== Engine Count ==")
-	for x,y in eCount.items():
-		print("%s: %s" % (x, y))
+	if not args["game"]: 
+		eCount = {k: v for k, v in sorted(engineDict.items(), reverse=True, key=lambda item: item[1])}
+		print("\n== Engine Count ==")
+		for x,y in eCount.items():
+			print("%s: %s" % (x, y))

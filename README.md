@@ -23,11 +23,11 @@ I'm looking for the following:
 - Adobe AIR
 - Build Engine
 - Clickteam Fusion 2.5
-- Construct 2
-- Construct 3
+- Construct (2/3)
 - Creation Engine [GameBryo]
 - Cube 2
 - DOSbox
+- Electron [Web App]
 - FPS Creator
 - GameGuru
 - GameMaker Legacy
@@ -43,9 +43,9 @@ I'm looking for the following:
 - Multimedia Fusion 2
 - nw.js
 - Panda3D
+- Pixel Game Maker MV
 - PyGame
-- Raycasting Game Maker 4
-- Raycasting Game Maker 5
+- Raycasting Game Maker (4/5)
 - Ren'Py
 - RPG Maker MV
 - RPG Maker VX
@@ -57,7 +57,7 @@ I'm looking for the following:
 - StepMania
 - Touhou
 - Unity
-- Unreal Engine
+- Unreal Engine 5
 - Visual RPG Studio
 - XNA
 - ZeroEngine
