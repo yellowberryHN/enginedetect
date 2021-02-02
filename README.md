@@ -47,10 +47,14 @@ I'm looking for the following:
 - PyGame
 - Raycasting Game Maker (4/5)
 - Ren'Py
+- RPG Maker MZ
 - RPG Maker MV
 - RPG Maker VX
 - RPG Maker VX Ace
 - RPG Maker XP
+- RPG Maker 2003
+- RPG Maker 2000
+- RPG Maker 95
 - RPG Paper Maker
 - Sexy (PopCap)
 - Source Engine
@@ -59,6 +63,7 @@ I'm looking for the following:
 - Unity
 - Unreal Engine 5
 - Visual RPG Studio
+- WOLF RPG Editor
 - XNA
 - ZeroEngine
 

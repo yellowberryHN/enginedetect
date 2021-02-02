@@ -116,12 +116,15 @@ def detectGame(dirName, fastParse=False):
 			file.close()
 
 	elif any(in_list_starts("data.")):
-		dataFiles = [in_list_starts("data.")]
-		for g in dataFiles:
-			with open(pj(dirName,g[0]),"rb") as fi:
-				if fi.read(4) == b'FORM':
-					engineType = "GameMaker Studio"
-				fi.close()
+		if any(in_list("Data.wolf")):
+			engineType = "WOLF RPG Editor"
+		else:
+			dataFiles = [in_list_starts("data.")]
+			for g in dataFiles:
+				with open(pj(dirName,g[0]),"rb") as fi:
+					if fi.read(4) == b'FORM':
+						engineType = "GameMaker Studio"
+					fi.close()
 
 	elif any(in_list("Common.dll")):
 		with open(pj(dirName,"Common.dll"), "r+b") as f:
@@ -133,6 +136,14 @@ def detectGame(dirName, fastParse=False):
 	elif any(in_list("libpanda.dll")):
 		engineType = "Panda3D"
 		engineSet = True
+
+	elif any(in_list_ends(".RPG")):
+		dataFiles = [in_list_ends(".RPG")]
+		for g in dataFiles:
+			with open(pj(dirName,g[0]),"rb") as fi:
+				if fi.read(12) == b'RPG Maker 95':
+					engineType = "RPG Maker 95"
+				fi.close()
 
 	elif any(in_list_ends(".pck")):
 		engineType = "Godot"
@@ -152,6 +163,17 @@ def detectGame(dirName, fastParse=False):
 				jn = json.load(file)
 			if jn["name"] == "KADOKAWA/RPGMV":
 				engineType = "RPG Maker MV"
+			else:
+				engineType = "nw.js"
+		except:
+			engineType = "nw.js"
+
+	elif any(in_list("resources.pak")):
+		try:
+			with open(pj(dirName,"package.json"), "r") as file:
+				jn = json.load(file)
+			if jn["name"] == "rmmz-game":
+				engineType = "RPG Maker MZ"
 			else:
 				engineType = "nw.js"
 		except:
@@ -286,6 +308,18 @@ def detectGame(dirName, fastParse=False):
 					continue
 				elif mm.find('ZeroEngine'.encode('utf-16be'))>0:
 					engineType = "ZeroEngine"
+					detectExe = exe
+					continue
+				elif mm.find('RPG Maker 95'.encode('utf-16be'))>0:
+					engineType = "RPG Maker 95"
+					detectExe = exe
+					continue
+				elif mm.find('RPG Maker 2000'.encode('utf-16be'))>0:
+					engineType = "RPG Maker 2000"
+					detectExe = exe
+					continue
+				elif mm.find('RPG Maker 2003'.encode('utf-16be'))>0:
+					engineType = "RPG Maker 2003"
 					detectExe = exe
 					continue
 				elif mm.find(b'RPG Paper Maker')>0:
