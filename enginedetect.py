@@ -90,7 +90,6 @@ def detectGame(dirName, fastParse=False):
 		return
 
 	if any(in_list("game.pak")):
-		engineType = "Raycasting Game Maker"
 		ver_num = [0, 0]
 		with open(pj(dirName,"game.pak"), "rb") as file:
 			file.read(8) # skip things we don't know
@@ -111,6 +110,7 @@ def detectGame(dirName, fastParse=False):
 				ver_num[1] = int(struct.unpack("<H",file.read(2))[0]/16)
 				file.read(2)
 				if ver_num[0] == ver_num[1]:
+					engineType = "Raycasting Game Maker"
 					if   ver_num[0] == 25: engineType += " 4"
 					elif ver_num[0] == 31: engineType += " 5"
 			file.close()
@@ -144,6 +144,9 @@ def detectGame(dirName, fastParse=False):
 				if fi.read(12) == b'RPG Maker 95':
 					engineType = "RPG Maker 95"
 				fi.close()
+
+	elif any(in_list_ends(".rpf")):
+		engineType = "RAGE"
 
 	elif any(in_list_ends(".pck")):
 		engineType = "Godot"
@@ -202,7 +205,7 @@ def detectGame(dirName, fastParse=False):
 		engineType = "StepMania"
 
 	elif any(in_list("Adobe AIR")):
-		if any(in_list_ends(".swf")):
+		if any(in_list_ends(".swf")): # that's a pretty fucking bold assumption, fix this later.
 			engineType = "Adobe AIR"
 
 	elif any(in_list("packages")) and os.path.isdir(pj(dirName,"packages")):
@@ -226,6 +229,19 @@ def detectGame(dirName, fastParse=False):
 	exeList = in_list_ends(".exe")
 	dirList = [i for i in gameDir if os.path.isdir(pj(dirName,i))]
 
+	# Dirty hack to sort the exes by filesize, since games usually have higher byte count exes than their launchers
+	# not superhot tho... stupid dumb idiot balls.
+	if len(exeList) > 1:
+		exeSize = []
+		for exe in exeList:
+			size = os.path.getsize(pj(dirName,exe))
+			exeSize.append((size, exe))
+		exeSize.sort(key=lambda s: s[0])
+		exeSize.reverse()
+		exeList.clear()
+		for pair in exeSize:
+			exeList.append(pair[1])
+
 	detectExe = ""
 
 	for g in dirList:
@@ -235,6 +251,8 @@ def detectGame(dirName, fastParse=False):
 	if not (fastParse and engineType=="Unknown") and engineType=="Unknown": # If fast mode, only run deep scan when we haven't found another engine
 		for exe in exeList:
 			exeName = exe[:-4]
+			exeType = None
+			exeArch = None
 			if exeName == "dosbox":
 				engineType = "DOSbox"
 				detectExe = exe
@@ -275,109 +293,122 @@ def detectGame(dirName, fastParse=False):
 
 			# slow shit beyond this point
 			else:
-				with open(pj(dirName,exe), "r+b") as f:
-					mm = mmap.mmap(f.fileno(), 0)
-					f.close() # not really needed, makes me feel better.
-				if mm.find(b'Microsoft.Xna.Framework')>0:
-					engineType = "XNA"
-					detectExe = exe
-					continue
-				elif mm.find('Pixel Game Maker MV'.encode('utf-16be'))>0:
-					engineType = "Pixel Game Maker MV"
-					detectExe = exe
-					continue
-				elif mm.find('Clickteam Fusion'.encode('utf-16be'))>0:
-					engineType = "Clickteam Fusion 2.5"
-					detectExe = exe
-					continue
-				elif mm.find('Multimedia Fusion'.encode('utf-16be'))>0:
-					engineType = "Multimedia Fusion 2"
-					detectExe = exe
-					continue
-				elif mm.find('FPSC'.encode('utf-16be'))>0:
-					engineType = "FPS Creator"
-					detectExe = exe
-					continue
-				elif mm.find('Game Guru'.encode('utf-16be'))>0:
-					engineType = "GameGuru"
-					detectExe = exe
-					continue
-				elif mm.find('Godot'.encode('utf-16be'))>0:
-					engineType = "Godot"
-					detectExe = exe
-					continue
-				elif mm.find('ZeroEngine'.encode('utf-16be'))>0:
-					engineType = "ZeroEngine"
-					detectExe = exe
-					continue
-				elif mm.find('RPG Maker 95'.encode('utf-16be'))>0:
-					engineType = "RPG Maker 95"
-					detectExe = exe
-					continue
-				elif mm.find('RPG Maker 2000'.encode('utf-16be'))>0:
-					engineType = "RPG Maker 2000"
-					detectExe = exe
-					continue
-				elif mm.find('RPG Maker 2003'.encode('utf-16be'))>0:
-					engineType = "RPG Maker 2003"
-					detectExe = exe
-					continue
-				elif mm.find(b'RPG Paper Maker')>0:
-					engineType = "RPG Paper Maker"
-					detectExe = exe
-					continue
-				elif mm.find(b':heGame')>0:
-					engineType = "Hacker Evolution"
-					detectExe = exe
-					continue
-				elif mm.find(b'hedGame:')>0:
-					engineType = "Hacker Evolution: Duality"
-					detectExe = exe
-					continue
-				elif mm.find(b'@Sexy@')>0:
-					engineType = "Sexy"
-					detectExe = exe
-					continue
-				elif mm.find(b'gamemaker')>0 and engineType != "GameMaker Studio":
-					engineType = "GameMaker Legacy"
-					detectExe = exe
-					continue
-				elif mm.find(b'pygame')>0:
-					engineType = "PyGame"
-					detectExe = exe
-					continue
-				elif mm.find(b'\x00python')>0 and not engineSet:
-					engineType = "PyGame"
-					detectExe = exe
-					continue
-				elif mm.find('electron.app'.encode('utf-16be'))>0:
-					engineType = "Electron [Web App]" # TODO: Detect CEF icudtl.dat
-					detectExe = exe
-					continue
-				elif zipfile.is_zipfile(pj(dirName,exe)):
-					with zipfile.ZipFile(pj(dirName,exe), 'r') as exeZip:
-						if any(in_list("main.lua",exeZip.namelist())):
-							engineType = "LOVE"
-						exeZip.close() # again, not needed.
+				try:
+					with open(pj(dirName,exe), "r+b") as f:
+						mm = mmap.mmap(f.fileno(), 0)
+						f.close() # not really needed, makes me feel better.
+					if mm.find(b'Microsoft.Xna.Framework')>0:
+						engineType = "XNA"
+						detectExe = exe
+						continue
+					elif mm.find('Pixel Game Maker MV'.encode('utf-16be'))>0:
+						engineType = "Pixel Game Maker MV"
+						detectExe = exe
+						continue
+					elif mm.find('Clickteam Fusion'.encode('utf-16be'))>0:
+						engineType = "Clickteam Fusion 2.5"
+						detectExe = exe
+						continue
+					elif mm.find('Multimedia Fusion'.encode('utf-16be'))>0:
+						engineType = "Multimedia Fusion 2"
+						detectExe = exe
+						continue
+					elif mm.find('FPSC'.encode('utf-16be'))>0:
+						engineType = "FPS Creator"
+						detectExe = exe
+						continue
+					elif mm.find('Game Guru'.encode('utf-16be'))>0:
+						engineType = "GameGuru"
+						detectExe = exe
+						continue
+					elif mm.find('Godot'.encode('utf-16be'))>0:
+						engineType = "Godot"
+						detectExe = exe
+						continue
+					elif mm.find('ZeroEngine'.encode('utf-16be'))>0:
+						engineType = "ZeroEngine"
+						detectExe = exe
+						continue
+					elif mm.find('RPG Maker 95'.encode('utf-16be'))>0:
+						engineType = "RPG Maker 95"
+						detectExe = exe
+						continue
+					elif mm.find('RPG Maker 2000'.encode('utf-16be'))>0:
+						engineType = "RPG Maker 2000"
+						detectExe = exe
+						continue
+					elif mm.find('RPG Maker 2003'.encode('utf-16be'))>0:
+						engineType = "RPG Maker 2003"
+						detectExe = exe
+						continue
+					elif mm.find(b'RPG Paper Maker')>0:
+						engineType = "RPG Paper Maker"
+						detectExe = exe
+						continue
+					elif mm.find(b':heGame')>0:
+						engineType = "Hacker Evolution"
+						detectExe = exe
+						continue
+					elif mm.find(b'hedGame:')>0:
+						engineType = "Hacker Evolution: Duality"
+						detectExe = exe
+						continue
+					elif mm.find(b'@Sexy@')>0:
+						engineType = "Sexy"
+						detectExe = exe
+						continue
+					elif mm.find(b'gamemaker')>0 and engineType != "GameMaker Studio":
+						engineType = "GameMaker Legacy"
+						detectExe = exe
+						continue
+					elif mm.find(b'pygame')>0:
+						engineType = "PyGame"
+						detectExe = exe
+						continue
+					elif mm.find(b'\x00python')>0 and not engineSet:
+						engineType = "PyGame"
+						detectExe = exe
+						continue
+					elif mm.find('electron.app'.encode('utf-16be'))>0:
+						engineType = "Electron [Web App]" # TODO: Detect CEF icudtl.dat
+						detectExe = exe
+						continue
+					elif zipfile.is_zipfile(pj(dirName,exe)):
+						with zipfile.ZipFile(pj(dirName,exe), 'r') as exeZip:
+							if any(in_list("main.lua",exeZip.namelist())):
+								engineType = "LOVE"
+							elif any(in_list("gdx.dll",exeZip.namelist())) or any(in_list("gdx64.dll",exeZip.namelist())):
+								engineType = "libGDX"
+							elif any(in_list("META-INF",exeZip.namelist())):
+								exeType = "Java"
+								exeArch = "Universal"
+							exeZip.close() # again, not needed.
 
-				if engineType == "Unknown": # If we still come up with nothing matched, just output some info about the executable
-					mm.seek(mm.find(b'PE\x00\x00')+4)
-					fileArch = struct.unpack("<H", mm.read(2))[0]
-					if fileArch == 332:
-						exeArch = "32-bit"
-						mm.seek(226, 1)
-						exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
-					elif fileArch == 34404:
-						exeArch = "64-bit"
-						mm.seek(242, 1)
-						exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
-					engineType = ("Unknown [%s, %s]" % (exeType, exeArch))
+					if engineType == "Unknown": # If we still come up with nothing matched, just output some info about the executable
+						if not exeType and not exeArch:
+							mm.seek(mm.find(b'PE\x00\x00')+4)
+							fileArch = struct.unpack("<H", mm.read(2))[0]
+							if fileArch == 332:
+								exeArch = "32-bit"
+								mm.seek(226, 1)
+								exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
+							elif fileArch == 34404:
+								exeArch = "64-bit"
+								mm.seek(242, 1)
+								exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
+						if exeType and exeArch: engineType += " [%s, %s]" % (exeType, exeArch)
 
-					detectExe = exe
-				del mm
-				gc.collect() # this might cause problems, but it might make it faster
+						detectExe = exe
+					del mm
+					gc.collect() # this might cause problems, but it might make it faster
+				except:
+					print("Error reading %s! Moving on." % (exe))
 	if engineType == "Unknown" and not fastParse:
-		return # At this point, if we don't know what it is, it's probably not a game at all.
+		if any(in_list("bin")) and os.path.isdir(pj(dirName,"bin")):
+			if args["verbose"] > 0: print("* %s - TODO: bin folder present, might contain something." % gameName)
+			return
+		else:
+			return # At this point, if we don't know what it is, it's probably not a game at all.
 
 	if not args["game"]: incDict(engineType)
 	return [gameName, engineType, subGames, detectExe]

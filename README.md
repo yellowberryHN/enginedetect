@@ -19,11 +19,14 @@ I'm looking for the following:
 
 ### Supported engines:
 
+There are currently ***52*** supported engines, with more on the way!
+
 - 3D Rad
 - Adobe AIR
 - Build Engine
 - Clickteam Fusion 2.5
-- Construct (2/3)
+- Construct 2
+- Construct 3
 - Creation Engine [GameBryo]
 - Cube 2
 - DOSbox
@@ -39,13 +42,17 @@ I'm looking for the following:
 - id Tech 2 [Quake]
 - id Tech 2 [Quake 2]
 - id Tech 3 [Quake 3]
+- Java (generic)
+- libGDX
 - LOVE
 - Multimedia Fusion 2
 - nw.js
 - Panda3D
 - Pixel Game Maker MV
 - PyGame
-- Raycasting Game Maker (4/5)
+- RAGE
+- Raycasting Game Maker 4
+- Raycasting Game Maker 5
 - Ren'Py
 - RPG Maker MZ
 - RPG Maker MV
@@ -61,19 +68,19 @@ I'm looking for the following:
 - StepMania
 - Touhou
 - Unity
-- Unreal Engine 5
+- Unreal Engine 4
 - Visual RPG Studio
 - WOLF RPG Editor
 - XNA
 - ZeroEngine
 
-### Engines to add support for:
+### Planned support:
+
+These are engines that I can't verify as I don't have any games written using them.
 
 - Amazon Lumberyard
 - CryEngine
 - Hazel
 - Frostbite
-- RAGE
 - IW Engine
 - Decima
-
