@@ -19,7 +19,7 @@ I'm looking for the following:
 
 ### Supported engines:
 
-There are currently ***52*** supported engines, with more on the way!
+There are currently ***53*** supported engines, with more on the way!
 
 - 3D Rad
 - Adobe AIR
@@ -39,6 +39,7 @@ There are currently ***52*** supported engines, with more on the way!
 - GoldSrc (with Steam support)
 - Hacker Evolution [heEngine]
 - Hacker Evolution: Duality [hedEngine]
+- HaxeFlixel
 - id Tech 2 [Quake]
 - id Tech 2 [Quake 2]
 - id Tech 3 [Quake 3]

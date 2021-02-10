@@ -369,6 +369,10 @@ def detectGame(dirName, fastParse=False):
 						engineType = "PyGame"
 						detectExe = exe
 						continue
+					elif mm.find(b'HaxeFlixel')>0:
+						engineType = "HaxeFlixel"
+						detectExe = exe
+						continue
 					elif mm.find('electron.app'.encode('utf-16be'))>0:
 						engineType = "Electron [Web App]" # TODO: Detect CEF icudtl.dat
 						detectExe = exe
