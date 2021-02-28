@@ -198,6 +198,13 @@ def detectGame(dirName, fastParse=False):
 		# I should check for .pak files, but some only have the folder as compat
 		engineType = "id Tech 3 [Quake 3]"
 
+	elif any(in_list("base")):
+		eee = in_list("base")[0]
+		if os.path.isdir(pj(dirName,eee)):
+			dataDir = os.listdir(pj(dirName,eee))
+			if any(in_list_ends(".pk4",dataDir)):
+				engineType = "id Tech 4"
+
 	elif any(in_list("3DRad_res")):
 		engineType = "3D Rad"
 
