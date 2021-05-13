@@ -46,6 +46,10 @@ def in_list_ends(string, sList=None):
 	if not sList: sList = gameDir
 	return [i for i in sList if i.lower().endswith(string.lower())]
 
+def in_list_loose(string, sList=None): # return all string in list that match
+	if not sList: sList = gameDir
+	return [i for i in sList if string.lower() in i.lower()]
+
 def pj(*args): # path join
 	return "/".join(list(args))
 
@@ -137,6 +141,10 @@ def detectGame(dirName, fastParse=False):
 		engineType = "Panda3D"
 		engineSet = True
 
+	elif any(in_list_loose("ChromeEngine")): # Chrome Engine DLLs
+		engineType = "Chrome Engine"
+		engineSet = True
+
 	elif any(in_list_ends(".RPG")):
 		dataFiles = [in_list_ends(".RPG")]
 		for g in dataFiles:
@@ -180,7 +188,7 @@ def detectGame(dirName, fastParse=False):
 			else:
 				engineType = "nw.js"
 		except:
-			engineType = "nw.js"
+			engineType = "Electron [Web App]"
 
 	elif any(in_list("renpy")):
 		engineType = "Ren'Py"
@@ -191,11 +199,11 @@ def detectGame(dirName, fastParse=False):
 		engineType = "id Tech 2 [Quake]"
 
 	elif any(in_list("baseq2")):
-		# I should check for .pak files, but some only have the folder as compat
+		# I should check for .pk2 files, but some only have the folder as compat
 		engineType = "id Tech 2 [Quake 2]"
 
 	elif any(in_list("baseq3")):
-		# I should check for .pak files, but some only have the folder as compat
+		# I should check for .pk3 files, but some only have the folder as compat
 		engineType = "id Tech 3 [Quake 3]"
 
 	elif any(in_list("base")):
@@ -233,6 +241,11 @@ def detectGame(dirName, fastParse=False):
 			if any(in_list_ends(".esm",dataDir)):
 				engineType = "Creation Engine [GameBryo]"
 
+	elif any(in_list_loose("desktop")):
+		eee = in_list_loose("desktop")[0]
+		if any(in_list("gdx.dll",eee)) or any(in_list("gdx64.dll",eee)):
+			engineType = "libGDX"
+
 	exeList = in_list_ends(".exe")
 	dirList = [i for i in gameDir if os.path.isdir(pj(dirName,i))]
 
@@ -251,9 +264,11 @@ def detectGame(dirName, fastParse=False):
 
 	detectExe = ""
 
-	for g in dirList:
+	for g in dirList: # this is bound to be incredibly slow
 		if any(in_list_ends(".vpk",os.listdir(pj(dirName,g)))):
 			engineType = "Source Engine"
+		elif any(in_list("halflife.wad",os.listdir(pj(dirName,g)))):
+			engineType = "GoldSrc"
 
 	if not (fastParse and engineType=="Unknown") and engineType=="Unknown": # If fast mode, only run deep scan when we haven't found another engine
 		for exe in exeList:
@@ -304,7 +319,11 @@ def detectGame(dirName, fastParse=False):
 					with open(pj(dirName,exe), "r+b") as f:
 						mm = mmap.mmap(f.fileno(), 0)
 						f.close() # not really needed, makes me feel better.
-					if mm.find(b'Microsoft.Xna.Framework')>0:
+					if mm.find(b'UnityMain')>0:
+						engineType = "Unity"
+						detectExe = exe
+						continue
+					elif mm.find(b'Microsoft.Xna.Framework')>0:
 						engineType = "XNA"
 						detectExe = exe
 						continue
@@ -373,7 +392,7 @@ def detectGame(dirName, fastParse=False):
 						detectExe = exe
 						continue
 					elif mm.find(b'\x00python')>0 and not engineSet:
-						engineType = "PyGame"
+						engineType = "Python-based (PyGame?)"
 						detectExe = exe
 						continue
 					elif mm.find(b'HaxeFlixel')>0:
@@ -382,6 +401,14 @@ def detectGame(dirName, fastParse=False):
 						continue
 					elif mm.find('electron.app'.encode('utf-16be'))>0:
 						engineType = "Electron [Web App]" # TODO: Detect CEF icudtl.dat
+						detectExe = exe
+						continue
+					elif mm.find(b'dieselx')>0:
+						engineType = "Diesel"
+						detectExe = exe
+						continue
+					elif mm.find(b'ChromeEngine')>0:
+						engineType = "Chrome Engine"
 						detectExe = exe
 						continue
 					elif zipfile.is_zipfile(pj(dirName,exe)):

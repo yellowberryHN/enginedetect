@@ -19,16 +19,18 @@ I'm looking for the following:
 
 ### Supported engines:
 
-There are currently ***54*** supported engines, with more on the way!
+There are currently ***56*** supported engines, with more on the way!
 
 - 3D Rad
 - Adobe AIR
 - Build Engine
+- Chrome Engine
 - Clickteam Fusion 2.5
 - Construct 2
 - Construct 3
 - Creation Engine [GameBryo]
 - Cube 2
+- Diesel
 - DOSbox
 - Electron [Web App]
 - FPS Creator
