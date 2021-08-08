@@ -424,16 +424,21 @@ def detectGame(dirName, fastParse=False):
 
 					if engineType == "Unknown": # If we still come up with nothing matched, just output some info about the executable
 						if not exeType and not exeArch:
-							mm.seek(mm.find(b'PE\x00\x00')+4)
-							fileArch = struct.unpack("<H", mm.read(2))[0]
-							if fileArch == 332:
-								exeArch = "32-bit"
-								mm.seek(226, 1)
-								exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
-							elif fileArch == 34404:
-								exeArch = "64-bit"
-								mm.seek(242, 1)
-								exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
+							peHeader = mm.find(b'PE\x00\x00')
+							if peHeader < 0:
+								exeArch = "16-bit"
+								exeType = "DOS"
+							else:
+								mm.seek(peHeader+4)
+								fileArch = struct.unpack("<H", mm.read(2))[0]
+								if fileArch == 332:
+									exeArch = "32-bit"
+									mm.seek(226, 1)
+									exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
+								elif fileArch == 34404:
+									exeArch = "64-bit"
+									mm.seek(242, 1)
+									exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
 						if exeType and exeArch: engineType += " [%s, %s]" % (exeType, exeArch)
 
 						detectExe = exe
