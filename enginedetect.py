@@ -194,7 +194,7 @@ def detectGame(dirName, fastParse=False):
 		engineType = "Ren'Py"
 		engineSet = True
 
-	elif any(in_list("q1")):
+	elif any(in_list("ID1")):
 		# I should check for .pak files, but some only have the folder as compat
 		engineType = "id Tech 2 [Quake]"
 
@@ -231,6 +231,9 @@ def detectGame(dirName, fastParse=False):
 	elif any(in_list("Engine")) and os.path.isdir(pj(dirName,"Engine")):
 		if any(in_list("Binaries", os.listdir(pj(dirName,"Engine")))) or any(in_list("Config", os.listdir(pj(dirName,"Engine")))):
 			engineType = "Unreal Engine 4"
+
+	elif any(in_list_starts("Xenko")):
+		engineType = "Xenko"
 
 	elif any(in_list_starts("Data")):
 		eee = in_list_starts("Data")[0]
@@ -409,6 +412,16 @@ def detectGame(dirName, fastParse=False):
 						continue
 					elif mm.find(b'ChromeEngine')>0:
 						engineType = "Chrome Engine"
+						detectExe = exe
+						continue
+					elif mm.find(b'Renderware')>0 or mm.find(b'RenderWare')>0 or mm.find(b'RwEngine')>0:
+						engineType = "RenderWare"
+						detectExe = exe
+					elif mm.find(b'Gamebryo')>0 or mm.find(b'gamebryo')>0 or mm.find(b'GameBryo')>0:
+						engineType = "GameBryo"
+						detectExe = exe
+					elif mm.find(b'reengine')>0:
+						engineType = "RE Engine"
 						detectExe = exe
 						continue
 					elif zipfile.is_zipfile(pj(dirName,exe)):

@@ -19,7 +19,7 @@ I'm looking for the following:
 
 ### Supported engines:
 
-There are currently ***56*** supported engines, with more on the way!
+There are currently ***60*** supported engines, with more on the way!
 
 - 3D Rad
 - Adobe AIR
@@ -34,6 +34,7 @@ There are currently ***56*** supported engines, with more on the way!
 - DOSbox
 - Electron [Web App]
 - FPS Creator
+- GameBryo
 - GameGuru
 - GameMaker Legacy
 - GameMaker Studio
@@ -57,7 +58,9 @@ There are currently ***56*** supported engines, with more on the way!
 - RAGE
 - Raycasting Game Maker 4
 - Raycasting Game Maker 5
+- RE Engine
 - Ren'Py
+- RenderWare
 - RPG Maker MZ
 - RPG Maker MV
 - RPG Maker VX
@@ -75,6 +78,7 @@ There are currently ***56*** supported engines, with more on the way!
 - Unreal Engine 4
 - Visual RPG Studio
 - WOLF RPG Editor
+- Xenko
 - XNA
 - ZeroEngine
 
