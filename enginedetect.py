@@ -5,8 +5,7 @@
 import os, sys, mmap, struct, array, json, zipfile, argparse, platform, gc
 
 args = {"engine": "", "dir": "", "game": "", "verbose": 0}
-if __name__=="__main__":
-
+if __name__ == "__main__":
 	if platform.system() != "Windows":
 		print("WARNING: This script is currently only designed for a Windows environment and Windows games! You may run into issues.")
 		input("Press ENTER to run anyway!")
@@ -83,7 +82,7 @@ def detectGame(dirName, fastParse=False):
 	engineType = "Unknown"
 	engineSet = False # Used for engines which might trigger multiple detections
 	subGames = [] # Used for GoldSrc
-	
+
 	dirName, gameDir = recurseDir(dirName, gameDir)
 
 	if any(in_list("application_info.json")):
@@ -161,7 +160,7 @@ def detectGame(dirName, fastParse=False):
 
 	elif any(in_list_ends(".grp")):
 		engineType = "Build Engine"
-	
+
 	elif any(in_list("nw.pak")):
 		if any(in_list("package.nw")) and zipfile.is_zipfile(pj(dirName,"package.nw")):
 			with zipfile.ZipFile("package.nw","r") as nwpak:
@@ -176,19 +175,22 @@ def detectGame(dirName, fastParse=False):
 				engineType = "RPG Maker MV"
 			else:
 				engineType = "nw.js"
-		except:
+		except OSError:
 			engineType = "nw.js"
 
 	elif any(in_list("resources.pak")):
-		try:
-			with open(pj(dirName,"package.json"), "r") as file:
-				jn = json.load(file)
-			if jn["name"] == "rmmz-game":
-				engineType = "RPG Maker MZ"
-			else:
-				engineType = "nw.js"
-		except:
-			engineType = "Electron [Web App]"
+		if any(in_list("package.nw")):
+			engineType = "nw.js"
+		else:
+			try:
+				with open(pj(dirName,"package.json"), "r") as file:
+					jn = json.load(file)
+				if jn["name"] == "rmmz-game":
+					engineType = "RPG Maker MZ"
+				else:
+					engineType = "nw.js"
+			except OSError:
+				engineType = "Electron [Web App]"
 
 	elif any(in_list("renpy")):
 		engineType = "Ren'Py"
@@ -278,6 +280,7 @@ def detectGame(dirName, fastParse=False):
 			exeName = exe[:-4]
 			exeType = None
 			exeArch = None
+
 			if exeName == "dosbox":
 				engineType = "DOSbox"
 				detectExe = exe
@@ -309,7 +312,7 @@ def detectGame(dirName, fastParse=False):
 			elif exeName == "hl": # hardcoding is bad
 				engineType = "GoldSrc"
 				detectExe = exe
-				
+
 				for g in dirList:
 					if any(in_list("dlls", os.listdir(pj(dirName,g)))):
 						subGames.append(g)
@@ -322,105 +325,107 @@ def detectGame(dirName, fastParse=False):
 					with open(pj(dirName,exe), "r+b") as f:
 						mm = mmap.mmap(f.fileno(), 0)
 						f.close() # not really needed, makes me feel better.
-					if mm.find(b'UnityMain')>0:
+					if findBin(mm, b'UnityMain'):
 						engineType = "Unity"
 						detectExe = exe
 						continue
-					elif mm.find(b'Microsoft.Xna.Framework')>0:
+					elif findBin(mm, b'Microsoft.Xna.Framework'):
 						engineType = "XNA"
 						detectExe = exe
 						continue
-					elif mm.find('Pixel Game Maker MV'.encode('utf-16be'))>0:
+					elif findBin(mm, 'Pixel Game Maker MV'.encode('utf-16be')):
 						engineType = "Pixel Game Maker MV"
 						detectExe = exe
 						continue
-					elif mm.find('Clickteam Fusion'.encode('utf-16be'))>0:
+					elif findBin(mm, 'Clickteam Fusion'.encode('utf-16be')):
 						engineType = "Clickteam Fusion 2.5"
 						detectExe = exe
 						continue
-					elif mm.find('Multimedia Fusion'.encode('utf-16be'))>0:
+					elif findBin(mm, 'Multimedia Fusion'.encode('utf-16be')):
 						engineType = "Multimedia Fusion 2"
 						detectExe = exe
 						continue
-					elif mm.find('FPSC'.encode('utf-16be'))>0:
+					elif findBin(mm, 'FPSC'.encode('utf-16be')):
 						engineType = "FPS Creator"
 						detectExe = exe
 						continue
-					elif mm.find('Game Guru'.encode('utf-16be'))>0:
+					elif findBin(mm, 'Game Guru'.encode('utf-16be')):
 						engineType = "GameGuru"
 						detectExe = exe
 						continue
-					elif mm.find('Godot'.encode('utf-16be'))>0:
+					elif findBin(mm, 'Godot'.encode('utf-16be')):
 						engineType = "Godot"
 						detectExe = exe
 						continue
-					elif mm.find('ZeroEngine'.encode('utf-16be'))>0:
+					elif findBin(mm, 'ZeroEngine'.encode('utf-16be')):
 						engineType = "ZeroEngine"
 						detectExe = exe
 						continue
-					elif mm.find('RPG Maker 95'.encode('utf-16be'))>0:
+					elif findBin(mm, 'RPG Maker 95'.encode('utf-16be')):
 						engineType = "RPG Maker 95"
 						detectExe = exe
 						continue
-					elif mm.find('RPG Maker 2000'.encode('utf-16be'))>0:
+					elif findBin(mm, 'RPG Maker 2000'.encode('utf-16be')):
 						engineType = "RPG Maker 2000"
 						detectExe = exe
 						continue
-					elif mm.find('RPG Maker 2003'.encode('utf-16be'))>0:
+					elif findBin(mm, 'RPG Maker 2003'.encode('utf-16be')):
 						engineType = "RPG Maker 2003"
 						detectExe = exe
 						continue
-					elif mm.find(b'RPG Paper Maker')>0:
+					elif findBin(mm, b'RPG Paper Maker'):
 						engineType = "RPG Paper Maker"
 						detectExe = exe
 						continue
-					elif mm.find(b':heGame')>0:
+					elif findBin(mm, b':heGame'):
 						engineType = "Hacker Evolution"
 						detectExe = exe
 						continue
-					elif mm.find(b'hedGame:')>0:
+					elif findBin(mm, b'hedGame:'):
 						engineType = "Hacker Evolution: Duality"
 						detectExe = exe
 						continue
-					elif mm.find(b'@Sexy@')>0:
+					elif findBin(mm, b'@Sexy@'):
 						engineType = "Sexy"
 						detectExe = exe
 						continue
-					elif mm.find(b'gamemaker')>0 and engineType != "GameMaker Studio":
+					elif findBin(mm, b'gamemaker') and engineType != "GameMaker Studio":
 						engineType = "GameMaker Legacy"
 						detectExe = exe
 						continue
-					elif mm.find(b'pygame')>0:
+					elif findBin(mm, b'pygame'):
 						engineType = "PyGame"
 						detectExe = exe
 						continue
-					elif mm.find(b'\x00python')>0 and not engineSet:
+					elif findBin(mm, b'\x00python') and not engineSet:
 						engineType = "Python-based (PyGame?)"
 						detectExe = exe
 						continue
-					elif mm.find(b'HaxeFlixel')>0:
+					elif findBin(mm, b'HaxeFlixel'):
 						engineType = "HaxeFlixel"
 						detectExe = exe
 						continue
-					elif mm.find('electron.app'.encode('utf-16be'))>0:
+					elif findBin(mm, 'electron.app'.encode('utf-16be')):
 						engineType = "Electron [Web App]" # TODO: Detect CEF icudtl.dat
 						detectExe = exe
 						continue
-					elif mm.find(b'dieselx')>0:
+					elif findBin(mm, b'dieselx'):
 						engineType = "Diesel"
 						detectExe = exe
 						continue
-					elif mm.find(b'ChromeEngine')>0:
+					elif findBin(mm, b'ChromeEngine'):
 						engineType = "Chrome Engine"
 						detectExe = exe
 						continue
-					elif mm.find(b'Renderware')>0 or mm.find(b'RenderWare')>0 or mm.find(b'RwEngine')>0:
+					elif findBin(mm, b'Renderware') or findBin(mm, b'RenderWare') or findBin(mm, b'RwEngine'):
 						engineType = "RenderWare"
 						detectExe = exe
-					elif mm.find(b'Gamebryo')>0 or mm.find(b'gamebryo')>0 or mm.find(b'GameBryo')>0:
+						continue
+					elif findBin(mm, b'Gamebryo') or findBin(mm, b'gamebryo') or findBin(mm, b'GameBryo'):
 						engineType = "GameBryo"
 						detectExe = exe
-					elif mm.find(b'reengine')>0:
+						continue
+					elif findBin(mm, b'reengine'):
 						engineType = "RE Engine"
 						detectExe = exe
 						continue
@@ -434,7 +439,6 @@ def detectGame(dirName, fastParse=False):
 								exeType = "Java"
 								exeArch = "Universal"
 							exeZip.close() # again, not needed.
-
 					if engineType == "Unknown": # If we still come up with nothing matched, just output some info about the executable
 						if not exeType and not exeArch:
 							peHeader = mm.find(b'PE\x00\x00')
@@ -468,7 +472,10 @@ def detectGame(dirName, fastParse=False):
 
 	if not args["game"]: incDict(engineType)
 	return [gameName, engineType, subGames, detectExe]
-		
+
+def findBin(binary, find):
+	return binary.find(find) > 0
+
 def detectClean(game, list):
 	info = detectGame(game)
 	if not info: return
@@ -480,10 +487,10 @@ def detectClean(game, list):
 		print(pfmt % (info[0], info[1], info[3] if info[3] else "N/A") if args["verbose"] > 0 else pfmt % (info[0], info[1]) )
 		if len(info[2]) > 0: print("  - Sub-games: %s" % str(info[2])[1:-1])
 
-if __name__=="__main__":
+if __name__ == "__main__":
 	# Gather all game directories
 	if not args["game"]:
-		gamedirs = next(os.walk(args["dir"] if args["dir"] else '.'))[1]
+		gamedirs = sorted(next(os.walk(args["dir"] if args["dir"] else '.'))[1], key=str.casefold)
 
 		print("== Games ==")
 		for game in gamedirs:
@@ -491,7 +498,7 @@ if __name__=="__main__":
 	else:
 		detectClean(args["game"], False)
 
-	if not args["game"]: 
+	if not args["game"]:
 		eCount = {k: v for k, v in sorted(engineDict.items(), reverse=True, key=lambda item: item[1])}
 		print("\n== Engine Count ==")
 		for x,y in eCount.items():
