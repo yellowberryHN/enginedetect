@@ -19,7 +19,7 @@ I'm looking for the following:
 
 ### Supported engines:
 
-There are currently ***60*** supported engines, with more on the way!
+There are currently ***61*** supported engines, with more on the way!
 
 - 3D Rad
 - Adobe AIR
@@ -48,6 +48,7 @@ There are currently ***60*** supported engines, with more on the way!
 - id Tech 3 [Quake 3]
 - id Tech 4
 - Java (generic)
+- Kirikiri Z
 - libGDX
 - LOVE
 - Multimedia Fusion 2

@@ -2,12 +2,19 @@
 # By Yellowberry
 # https://github.com/YellowberryHN/enginedetect
 
-import os, sys, mmap, struct, array, json, zipfile, argparse, platform, gc
+import argparse
+import gc
+import json
+import mmap
+import os
+import platform
+import struct
+import zipfile
 
 args = {"engine": "", "dir": "", "game": "", "verbose": 0}
 if __name__ == "__main__":
 	if platform.system() != "Windows":
-		print("WARNING: This script is currently only designed for a Windows environment and Windows games! You may run into issues.")
+		print("WARNING: This script is designed for a Windows environment and Windows games! You may run into issues.")
 		input("Press ENTER to run anyway!")
 
 	parser = argparse.ArgumentParser()
@@ -28,7 +35,7 @@ gameDir = []
 
 filterEngine = args["engine"] # Engine to filter results
 
-def incDict(name):
+def inc_engine_counter(name):
 	if not name in engineDict.keys():
 		engineDict[name] = 0
 	engineDict[name] += 1
@@ -121,6 +128,8 @@ def detectGame(dirName, fastParse=False):
 	elif any(in_list_starts("data.")):
 		if any(in_list("Data.wolf")):
 			engineType = "WOLF RPG Editor"
+		elif any(in_list("data.xp3")):
+			engineType = "Kirikiri Z"
 		else:
 			dataFiles = [in_list_starts("data.")]
 			for g in dataFiles:
@@ -316,14 +325,14 @@ def detectGame(dirName, fastParse=False):
 				for g in dirList:
 					if any(in_list("dlls", os.listdir(pj(dirName,g)))):
 						subGames.append(g)
-						if not args["game"]: incDict(engineType)
+						if not args["game"]: inc_engine_counter(engineType)
 				continue
 
 			# slow shit beyond this point
 			else:
 				try:
-					with open(pj(dirName,exe), "r+b") as f:
-						mm = mmap.mmap(f.fileno(), 0)
+					with open(pj(dirName,exe), "rb") as f:
+						mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 						f.close() # not really needed, makes me feel better.
 					if findBin(mm, b'UnityMain'):
 						engineType = "Unity"
@@ -470,7 +479,7 @@ def detectGame(dirName, fastParse=False):
 		else:
 			return # At this point, if we don't know what it is, it's probably not a game at all.
 
-	if not args["game"]: incDict(engineType)
+	if not args["game"]: inc_engine_counter(engineType)
 	return [gameName, engineType, subGames, detectExe]
 
 def findBin(binary, find):
