@@ -426,7 +426,7 @@ def detectGame(dirName, fastParse=False):
 						engineType = "Chrome Engine"
 						detectExe = exe
 						continue
-					elif findBin(mm, b'Renderware') or findBin(mm, b'RenderWare') or findBin(mm, b'RwEngine'):
+					elif (findBin(mm, b'Renderware') and not findBin(mm, b'Renderware TXD')) or findBin(mm, b'RenderWare') or findBin(mm, b'RwEngine'):
 						engineType = "RenderWare"
 						detectExe = exe
 						continue
@@ -465,7 +465,12 @@ def detectGame(dirName, fastParse=False):
 									exeArch = "64-bit"
 									mm.seek(242, 1)
 									exeType = "Win32" if struct.unpack("<I", mm.read(4))[0] == 0 else ".NET"
-						if exeType and exeArch: engineType += " [%s, %s]" % (exeType, exeArch)
+						if exeType and exeArch:
+							engineType += " [%s, %s]" % (exeType, exeArch)
+
+						# Try to detect packers (experimental)
+						if findBin(mm, b'.enigma1'):
+							engineType += ", [Enigma Virtual Box]"
 
 						detectExe = exe
 					del mm
